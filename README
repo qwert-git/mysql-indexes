@@ -1,29 +1,52 @@
 The goal of the test is to test how mysql execute INSERT and SELECT for tables with and witout indexes.
 
-Table Row Count = 40000.
-
+SELECT, Rows Count = 40k;
 No Index
-1. SELECT * FROM Users WHERE DateOfBirth = @v_date	3 row(s) returned	0.016 sec / 0.000 sec
-2. SELECT * FROM Users WHERE DateOfBirth > @v_date	25247 row(s) returned	0.000 sec / 0.046 sec
-3. SELECT * FROM Users WHERE DateOfBirth < @v_date	14751 row(s) returned	0.000 sec / 0.031 sec
-4. SELECT * FROM Users WHERE DateOfBirth IN (@v_date, @v_date1, @v_date2)	8 row(s) returned	0.032 sec / 0.000 sec
+SELECT * FROM Users WHERE DateOfBirth = @v_date	3 row(s) returned	0.016 sec / 0.000 sec
+SELECT * FROM Users WHERE DateOfBirth > @v_date	25247 row(s) returned	0.000 sec / 0.046 sec
+SELECT * FROM Users WHERE DateOfBirth < @v_date	14751 row(s) returned	0.000 sec / 0.031 sec
 
 BTree Index
-1. SELECT * FROM Users WHERE DateOfBirth = @v_date	3 row(s) returned	0.000 sec / 0.000 sec
-2. SELECT * FROM Users WHERE DateOfBirth > @v_date	25247 row(s) returned	0.015 sec / 0.047 sec
-3. SELECT * FROM Users WHERE DateOfBirth < @v_date	14751 row(s) returned	0.000 sec / 0.032 sec
-4. SELECT * FROM Users WHERE DateOfBirth IN (@v_date, @v_date1, @v_date2)	8 row(s) returned	0.000 sec / 0.000 sec
+SELECT * FROM Users WHERE DateOfBirth = @v_date	3 row(s) returned	0.000 sec / 0.000 sec
+SELECT * FROM Users WHERE DateOfBirth > @v_date	25247 row(s) returned	0.015 sec / 0.047 sec
+SELECT * FROM Users WHERE DateOfBirth < @v_date	14751 row(s) returned	0.000 sec / 0.032 sec
 
 Hash Index
-1. SELECT * FROM Users_Hash WHERE DateOfBirth = @v_date	6 row(s) returned	0.000 sec / 0.000 sec
-2. SELECT * FROM Users_Hash WHERE DateOfBirth > @v_date	25123 row(s) returned	0.000 sec / 0.031 sec
-3. SELECT * FROM Users_Hash WHERE DateOfBirth < @v_date	14871 row(s) returned	0.015 sec / 0.031 sec
-4. SELECT * FROM Users_Hash WHERE DateOfBirth IN (@v_date, @v_date1, @v_date2)	14 row(s) returned	0.016 sec / 0.000 sec
+SELECT * FROM Users_Hash WHERE DateOfBirth = @v_date	6 row(s) returned	0.000 sec / 0.000 sec
+SELECT * FROM Users_Hash WHERE DateOfBirth > @v_date	25123 row(s) returned	0.000 sec / 0.031 sec
+SELECT * FROM Users_Hash WHERE DateOfBirth < @v_date	14871 row(s) returned	0.015 sec / 0.031 sec
 
 
-INSERT DATA 40k
+SELECT, Rows Count = 40M;
+No Index
+SELECT * FROM Users WHERE DateOfBirth = '2011-04-27'	4017 row(s) returned	    1.453 sec
+SELECT * FROM Users WHERE DateOfBirth > '2011-04-27'	16882925 row(s) returned	0.000 sec
+SELECT * FROM Users WHERE DateOfBirth < '2011-04-27'	24153058 row(s) returned	0.000 sec
+
+
+BTree Index
+SELECT * FROM Users WHERE DateOfBirth = '2011-04-27'	4017 row(s) returned	    0.032 sec
+SELECT * FROM Users WHERE DateOfBirth > '2011-04-27'	16882925 row(s) returned	0.000 sec
+SELECT * FROM Users WHERE DateOfBirth < '2011-04-27'	24153058 row(s) returned	0.016 sec
+
+HASH Index
+Didn't work for me, as I had warning like  "The storage engine (InnoDB) does not support the HASH INDEX".
+The option I have found is to re-create table with the explicit set Engine as MEMORY, but it doesn't allow to fit so many records in the memory.
+
+
+INSERT DATA 40k, differences with/without index;
 No Index (With Transaction): 43088 ms
 Hash Index (With Transaction): 316581 ms
 Hash Index (No Transaction): 311552 ms
 BTree Index (With Transaction): 56140 ms
 BTree Index (No Transaction): 825632 ms
+
+INSERT DATA 10M, 1 Huge Insert;
+'innodb_flush_log_at_trx_commit' = 1 : 1681851 ms = 28.03085 min
+'innodb_flush_log_at_trx_commit' = 2 : 1737860 ms = 28.96433 min 
+'innodb_flush_log_at_trx_commit' = 0 : 1642553 ms = 27.37588 min 
+
+INSERT DATA 10k, Single thread, 1 row per insert;
+'innodb_flush_log_at_trx_commit' = '1' : 328354 ms
+'innodb_flush_log_at_trx_commit' = '2' : 180948 ms
+'innodb_flush_log_at_trx_commit' = '0' : 180027 ms

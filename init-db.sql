@@ -10,6 +10,9 @@ CREATE TABLE Users
     DateOfBirth DATE NOT NULL
 );
 
+CREATE INDEX btree_index ON Users (DateOfBirth) USING HASH;
+
+SET GLOBAL innodb_adaptive_hash_index=OFF;
 
 CREATE TABLE Users_Hash 
 (
@@ -18,3 +21,7 @@ CREATE TABLE Users_Hash
     Age int NOT NULL,
     DateOfBirth DATE NOT NULL
 ) ENGINE = MEMORY;
+
+CREATE INDEX hash_index ON Users_Hash (DateOfBirth) USING HASH;
+
+SET GLOBAL innodb_flush_log_at_trx_commit=2;

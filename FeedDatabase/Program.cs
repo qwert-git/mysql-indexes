@@ -1,30 +1,49 @@
 ﻿using System.Diagnostics;
+using Dapper;
 using MySql.Data.MySqlClient;
 
 string connstring = "server=127.0.0.1;uid=root;pwd=pass;database=Test";
 
+
+const int UserMillionsNumber = 1 * 1000 * 1000 * 10;
+
+
 using var connection = new MySqlConnection(connstring);
 
-connection.Open();
-
-using var tr = connection.BeginTransaction();
-
-const int UserNumber = 400000;
+var settings = connection.QueryFirst<dynamic>("SHOW GLOBAL VARIABLES LIKE 'innodb_flush_log_at_trx_commit';");
+Console.WriteLine(settings);
 
 var sw = Stopwatch.StartNew(); 
-for (int i = 0; i < UserNumber; i++)
+
+var sqls = GetSqlsInBatches(UserMillionsNumber);
+foreach (var sql in sqls)
 {
-    string query = $"INSERT INTO Users (Name, Age, DateOfBirth) VALUES (\"{Faker.Name.FullName()}\", {Faker.RandomNumber.Next(80)}, '{RandomDay()}');";
-
-    var cmd = new MySqlCommand(query, connection);
-
-    await cmd.ExecuteNonQueryAsync();
+    await connection.ExecuteAsync(sql);
 }
-
-tr.Commit();
 
 sw.Stop();
 Console.WriteLine($"Elapsed Time: {sw.ElapsedMilliseconds} ms");
+
+
+IList<string> GetSqlsInBatches(int usersCount)
+{
+    var insertSql = "INSERT INTO Users (Name, Age, DateOfBirth) VALUES ";
+    var batchSize = 1000;
+
+    var sqlsToExecute = new List<string>();
+    var numberOfBatches = (int)Math.Ceiling((double)usersCount / batchSize);
+
+    for (int i = 0; i < numberOfBatches; i++)
+    {
+        var valuesToInsert = new List<string>();
+        for(int j = 0; j < batchSize; j++)
+         valuesToInsert.Add($"(\"{Faker.Name.FullName()}\", {Faker.RandomNumber.Next(80)}, '{RandomDay()}')");
+        
+        sqlsToExecute.Add(insertSql + string.Join(',', valuesToInsert));
+    }
+
+    return sqlsToExecute;
+}
 
 static string RandomDay()
 {
